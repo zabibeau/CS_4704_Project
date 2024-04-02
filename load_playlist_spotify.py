@@ -1,92 +1,56 @@
-import requests
-from urllib.parse import urlencode
-import base64
-import webbrowser
 import os
+from flask import Flask, request, redirect, url_for
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
-from flask import Flask, request  
-import time
 
-app = Flask(__name__)
-
+# Load environment variables from .env file
 load_dotenv()
 
-# Define Spotify app credentials
-client_id = os.environ['SPOTIFY_CLIENT_ID']
-client_secret = os.environ['SPOTIFY_CLIENT_SECRET']
-redirect_uri = os.environ['SPOTIFY_REDIRECT_URI']  # Your redirect URI
+# Initialize Flask app
+app = Flask(__name__)
 
-auth_headers = {
-    "client_id": client_id,
-    "client_secret": client_secret,
-    "response_type": "code",
-    "redirect_uri": redirect_uri,
-    "scope": "playlist-modify-public playlist-modify-private"
-}
+# Spotify credentials and settings
+CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
+CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
+REDIRECT_URI = os.getenv('SPOTIFY_REDIRECT_URI')
+SCOPE = 'user-read-private user-read-email playlist-modify-public'
 
-# Global variable to store the authorization code
-authorization_code = None
+# Create SpotifyOAuth object for handling authorization
+sp_oauth = SpotifyOAuth(client_id=CLIENT_ID,
+                        client_secret=CLIENT_SECRET,
+                        redirect_uri=REDIRECT_URI,
+                        scope=SCOPE)
 
-def wait_for_authorization_code():
-    global authorization_code
-    while authorization_code is None:
-        time.sleep(0.1)  # Wait for 1 second before checking again
-        if authorization_code is not None:
-            break
-    return authorization_code
+@app.route('/')
+def login():
+    # Redirect user to Spotify authorization URL
+    auth_url = sp_oauth.get_authorize_url()
+    return redirect(auth_url)
 
 @app.route('/callback')
 def callback():
-    global authorization_code
-    full_url = request.url
-    authorization_code = full_url.split('code=')[1]
-    return 'Authorization code received successfully. You may now close this tab.'
+    # Retrieve authorization code from callback query parameters
+    code = request.args.get('code')
+    
+    # Exchange authorization code for access token
+    token_info = sp_oauth.get_access_token(code)
+    
+    # Create Spotify client with access token
+    sp = spotipy.Spotify(auth=token_info['access_token'])
+    
+    # Retrieve current user's Spotify ID
+    user_id = sp.current_user()['id']
+    
+    # Define new playlist details
+    playlist_name = 'New Awesome Playlist'
+    playlist_description = 'Automatically created playlist'
+    
+    # Create the playlist for the current user
+    playlist = sp.user_playlist_create(user=user_id, name=playlist_name, description=playlist_description, public=True)
+    
+    # Return playlist creation confirmation and link
+    return f"Playlist created: {playlist['external_urls']['spotify']}"
 
-# Open Spotify authorization page
-webbrowser.open("https://accounts.spotify.com/authorize?" + urlencode(auth_headers))
-
-# Start the Flask application
-app.run(port=8888)
-
-# Wait until authorization code is received
-authorization_code = wait_for_authorization_code()
-
-# Proceed with further actions using the authorization code
-encoded_credentials = (base64.b64encode(client_id.encode() + b':' + client_secret.encode())).decode('utf-8')
-
-token_headers = {
-    "Authorization": f"Basic {encoded_credentials}",
-    "Content-Type": "application/x-www-form-urlencoded"
-}
-
-token_data = {
-    'grant_type': 'authorization_code',
-    'code': authorization_code,
-    'redirect_uri': redirect_uri
-}
-response = requests.post("https://accounts.spotify.com/api/token", headers=token_headers, data=token_data)
-print(response.json())
-
-
-token = response.json()['access_token']
-
-user = 'bubby000'
-
-# Create a playlist for the user
-playlist_headers = {
-    "Authorization": f"Bearer {token}",
-    "Content-Type": "application/json"
-}
-
-playlist_data = {
-    "name": "My New Playlist # 2",
-    "public": False,
-    "description": "My new playlist description"
-}
-
-resp = requests.post(f"https://api.spotify.com/v1/users/{user}/playlists", headers=playlist_headers, json=playlist_data)
-# Stop the Flask application
-print(resp.json())
-
-# Close the Flask application
-exit(0)
+if __name__ == "__main__":
+    app.run(debug=True, port=8888)
