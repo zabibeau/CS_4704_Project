@@ -14,13 +14,17 @@ app = Flask(__name__)
 CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
 CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
 REDIRECT_URI = os.getenv('SPOTIFY_REDIRECT_URI')
-SCOPE = 'user-read-private,user-read-email,playlist-modify-public,playlist-modify-private'
+SCOPE = 'user-top-read'
 
 # Create SpotifyOAuth object for handling authorization
 sp_oauth = SpotifyOAuth(client_id=CLIENT_ID,
                         client_secret=CLIENT_SECRET,
                         redirect_uri=REDIRECT_URI,
-                        scope=SCOPE)
+                        scope=SCOPE,
+                        cache_path='cache.txt',
+                        open_browser=True)
+
+print(sp_oauth.get_authorize_url())
 
 @app.route('/')
 def login():
@@ -34,23 +38,19 @@ def callback():
     code = request.args.get('code')
     
     # Exchange authorization code for access token
-    token_info = sp_oauth.get_access_token(code, as_dict=False, check_cache=False)
+    token_info = sp_oauth.get_access_token(code, as_dict=False)
     # Create Spotify client with access token
     sp = spotipy.Spotify(auth=token_info)
-    # Retrieve current user's Spotify ID
-    user_id = sp.current_user()['id']
-
-    print(f"User ID: {user_id}")
     
     # Define new playlist details
-    playlist_name = 'New Awesome Playlist'
-    playlist_description = 'Automatically created playlist'
     
     # Create the playlist for the current user
-    playlist = sp.user_playlist_create(user=user_id, name=playlist_name, description=playlist_description, public=True)
+    tracks = sp.current_user_top_tracks(time_range='short_term', limit=10)
     
-    # Return playlist creation confirmation and link
-    return f"Playlist created: {playlist['external_urls']['spotify']}"
+    print(tracks)
+
+    return f"Top Tracks found"
+    
 
 if __name__ == "__main__":
     app.run(debug=True, port=8888)
