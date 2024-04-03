@@ -14,7 +14,7 @@ app = Flask(__name__)
 CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
 CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
 REDIRECT_URI = os.getenv('SPOTIFY_REDIRECT_URI')
-SCOPE = 'user-read-private user-read-email playlist-modify-public'
+SCOPE = 'user-read-private,user-read-email,playlist-modify-public,playlist-modify-private'
 
 # Create SpotifyOAuth object for handling authorization
 sp_oauth = SpotifyOAuth(client_id=CLIENT_ID,
@@ -34,13 +34,13 @@ def callback():
     code = request.args.get('code')
     
     # Exchange authorization code for access token
-    token_info = sp_oauth.get_access_token(code)
-    
+    token_info = sp_oauth.get_access_token(code, as_dict=False, check_cache=False)
     # Create Spotify client with access token
-    sp = spotipy.Spotify(auth=token_info['access_token'])
-    
+    sp = spotipy.Spotify(auth=token_info)
     # Retrieve current user's Spotify ID
     user_id = sp.current_user()['id']
+
+    print(f"User ID: {user_id}")
     
     # Define new playlist details
     playlist_name = 'New Awesome Playlist'

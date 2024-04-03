@@ -29,7 +29,7 @@ sp = spotipy.client.Spotify(auth_manager=SpotifyOAuth(client_id=CLIENT_ID,
 
 # Retrieve the user's playlists
 
-user = '31rfar7y2rwf3orqimxe36i43qb4'#put some username here
+user = ''#put some username here
 playlists = sp.user_playlists(user)
 
 # Print the list of playlists
@@ -37,5 +37,5 @@ print("Your playlists:")
 for playlist in playlists['items']:
     print(playlist['name'])
     for track in sp.playlist_tracks(playlist['id'])['items']:
-        print(track['track'])
+        print(track['track']['name'].encode('utf-8'))
     print('\n')
