@@ -10,3 +10,4 @@ pip install json
 pip install base64
 pip install webbrowser
 pip install flask
+pip install ytmusicapi
