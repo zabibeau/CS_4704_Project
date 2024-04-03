@@ -6,16 +6,21 @@ from dotenv import load_dotenv
 load_dotenv()
 
 yt = YTMusic("oauth.json")
+#yt = YTMusic()
 
-user = 'eatacrakker 1'
-playlists = yt.get_user_playlists(user, yt.get_artist(user))
+#User is the user's channel ID
+user = 'UCOTh5gSUXmLoAvEwAcZ1QvA'
+
+userInfo = yt.get_user('UCOTh5gSUXmLoAvEwAcZ1QvA')
 
 # Print the list of playlists
+
 print("Your playlists:")
-for playlist in playlists['items']:
-    print(playlist['title'])
+
+for playlists in userInfo['playlists']['results']:
     # Get the tracks in the playlist
-    tracks = yt.get_playlist(playlist['playlistId'], limit=100)  # Limit set to 100, adjust as necessary
-    for track in tracks['tracks']:
+    print(playlists['title'])
+    print()
+    playlist = yt.get_playlist(playlists['playlistId'])
+    for track in playlist['tracks']:
         print(track['title'])
-    print('\n')
