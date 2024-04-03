@@ -1,3 +1,5 @@
+#Reference: https://ashleygingeleski.com/2019/11/11/spotify-web-api-how-to-pull-and-clean-top-song-data-using-python/
+
 import os
 from flask import Flask, request, redirect, url_for
 import spotipy
