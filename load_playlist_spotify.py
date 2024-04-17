@@ -28,29 +28,40 @@ def login():
     auth_url = sp_oauth.get_authorize_url()
     return redirect(auth_url)
 
+def search_tracks(sp, track_queries):
+    """Search for tracks by name and artist, and return their URIs."""
+    track_uris = []
+    for query in track_queries:
+        result = sp.search(q=query, limit=1, type='track')
+        tracks = result['tracks']['items']
+        if tracks:
+            track_uris.append(tracks[0]['uri'])
+    return track_uris
+
+def add_tracks_to_playlist(sp, playlist_id, track_uris):
+    """Add tracks to a specific playlist."""
+    sp.playlist_add_items(playlist_id=playlist_id, items=track_uris)
+
 @app.route('/callback')
 def callback():
-    # Retrieve authorization code from callback query parameters
     code = request.args.get('code')
-    
-    # Exchange authorization code for access token
     token_info = sp_oauth.get_access_token(code, as_dict=False, check_cache=False)
-    # Create Spotify client with access token
     sp = spotipy.Spotify(auth=token_info)
-    # Retrieve current user's Spotify ID
     user_id = sp.current_user()['id']
-
-    print(f"User ID: {user_id}")
     
-    # Define new playlist details
+    # Create the playlist
     playlist_name = 'New Awesome Playlist'
-    playlist_description = 'Automatically created playlist'
-    
-    # Create the playlist for the current user
+    playlist_description = 'Automatically created playlist featuring Gunna'
     playlist = sp.user_playlist_create(user=user_id, name=playlist_name, description=playlist_description, public=True)
-    
-    # Return playlist creation confirmation and link
-    return f"Playlist created: {playlist['external_urls']['spotify']}"
+    playlist_id = playlist['id']
+
+    # Tracks by Gunna to be added to the playlist
+    track_queries = ['Drip Too Hard - Gunna', 'Skybox - Gunna', 'Wunna - Gunna']
+    track_uris = search_tracks(sp, track_queries)
+    add_tracks_to_playlist(sp, playlist_id, track_uris)
+
+    return f"Playlist created and tracks added: {playlist['external_urls']['spotify']}"
 
 if __name__ == "__main__":
+    app.secret_key = 'your_secret_key_here'  # Ensure you set this in your environment variables
     app.run(debug=True, port=8888)
